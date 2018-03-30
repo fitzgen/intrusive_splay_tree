@@ -4,6 +4,11 @@
 
 //! An intrusive, allocation-free [splay tree] implementation.
 //!
+//! [![](https://docs.rs/intrusive_splay_tree/badge.svg)](https://docs.rs/intrusive_splay_tree/)
+//! [![](https://img.shields.io/crates/v/intrusive_splay_tree.svg)](https://crates.io/crates/intrusive_splay_tree)
+//! [![](https://img.shields.io/crates/d/intrusive_splay_tree.svg)](https://crates.io/crates/intrusive_splay_tree)
+//! [![Travis CI Build Status](https://travis-ci.org/fitzgen/intrusive_splay_tree.svg?branch=master)](https://travis-ci.org/fitzgen/intrusive_splay_tree)
+//!
 //! Splay trees are self-adjusting, meaning that operating on an element (for
 //! example, doing a `find` or an `insert`) rebalances the tree in such a way
 //! that the element becomes the root. This means that subsequent operations on
