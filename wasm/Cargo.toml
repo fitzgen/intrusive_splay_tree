@@ -1,0 +1,14 @@
+[package]
+name = "intrusive_splay_tree_wasm"
+version = "0.1.0"
+authors = ["Nick Fitzgerald <fitzgen@gmail.com>"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+intrusive_splay_tree = { path = ".." }
+
+[profile.release]
+opt-level = "s"
+lto = true
