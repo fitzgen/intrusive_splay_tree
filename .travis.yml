@@ -8,3 +8,4 @@ rust:
 
 script:
   - cargo test
+  - if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then ./wasm/build.sh; fi
