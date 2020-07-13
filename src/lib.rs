@@ -282,26 +282,7 @@ macro_rules! impl_intrusive_node {
             unsafe fn node_to_elem(
                 node: & $intrusive_node_lifetime $crate::Node< $intrusive_node_lifetime >
             ) -> & $intrusive_node_lifetime Self::Elem {
-                let s: Self::Elem = $crate::uninitialized();
-
-                let offset = {
-                    let base = &s as *const _ as usize;
-
-                    // XXX: We are careful not to deref the uninitialized data
-                    // by using irrefutable let patterns instead of `s.$node`.
-                    let Self::Elem { ref $node, .. } = s;
-
-                    // Annotate with explicit types here so that compilation
-                    // will fail if someone uses this macro with a non-Node
-                    // field of `Self::Elem`.
-                    let $node: &$crate::Node = $node;
-                    let field = $node as *const $crate::Node as usize;
-
-                    field - base
-                };
-
-                // Don't run destructors on uninitialized data.
-                $crate::forget(s);
+                let offset = memoffset::offset_of!(Self::Elem, $node);
 
                 let node = node as *const _ as *const u8;
                 let elem = node.offset(-(offset as isize)) as *const Self::Elem;
@@ -309,18 +290,6 @@ macro_rules! impl_intrusive_node {
             }
         }
     }
-}
-
-#[doc(hidden)]
-#[inline(always)]
-pub unsafe fn uninitialized<T>() -> T {
-    core::mem::uninitialized()
-}
-
-#[doc(hidden)]
-#[inline(always)]
-pub unsafe fn forget<T>(t: T) {
-    core::mem::forget(t);
 }
 
 /// A total ordering between the `Self` type and the tree's element type

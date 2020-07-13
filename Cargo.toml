@@ -12,6 +12,7 @@ version = "0.1.0"
 travis-ci = { repository = "fitzgen/wee_alloc" }
 
 [dependencies]
+memoffset = "0.5.5"
 unreachable = "1.0.0"
 
 [dev-dependencies]
