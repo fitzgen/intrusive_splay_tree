@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/fitzgen/intrusive_splay_tree.svg?branch=master)](https://travis-ci.org/fitzgen/intrusive_splay_tree)
+
 # intrusive_splay_tree
 
 An intrusive, allocation-free [splay tree] implementation.
@@ -47,7 +49,7 @@ implementation uses the "top-down" variant of splay trees.
 ### Constraints
 
 * **Elements within a tree must all have the same lifetime.** This means
-that you must use something like the [`typed_arena`][arena] crate for
+that you must use something like the [`bumpalo`][arena] crate for
 allocation, or be working with static data, etc.
 
 * **Elements in an intrusive collections are inherently shared.** They are
@@ -59,7 +61,7 @@ element out of an intrusive splay tree. To work around this, you may need to
 liberally use interior mutability, for example by leveraging `Cell`,
 `RefCell`, and `Mutex`.
 
-[arena]: https://crates.io/crates/typed-arena
+[arena]: https://crates.io/crates/bumpalo
 
 ### Example
 
@@ -68,11 +70,7 @@ within two intrusive trees: one ordering monsters by their name, and the
 other ordering them by their health.
 
 ```rust
-#[macro_use]
-extern crate intrusive_splay_tree;
-extern crate typed_arena;
-
-use intrusive_splay_tree::SplayTree;
+use intrusive_splay_tree::{impl_intrusive_node, SplayTree};
 
 use std::cmp::Ordering;
 use std::marker::PhantomData;
@@ -145,10 +143,10 @@ impl<'a> intrusive_splay_tree::TreeOrd<'a, MonstersByName> for str {
 }
 
 impl<'a> Monster<'a> {
-    /// The `Monster` constructor allocates `Monster`s in a typed arena, and
+    /// The `Monster` constructor allocates `Monster`s in a bump arena, and
     /// inserts the new `Monster` in both trees.
     pub fn new(
-        arena: &'a typed_arena::Arena<Monster<'a>>,
+        arena: &'a bumpalo::Bump,
         name: String,
         health: u64,
         by_name_tree: &mut SplayTree<'a, MonstersByName>,
@@ -170,7 +168,7 @@ impl<'a> Monster<'a> {
 
 fn main() {
     // The arena that the monsters will live within.
-    let mut arena = typed_arena::Arena::new();
+    let mut arena = bumpalo::Bump::new();
 
     // The splay trees ordered by name and health respectively.
     let mut by_name_tree = SplayTree::default();

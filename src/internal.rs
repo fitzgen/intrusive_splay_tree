@@ -37,7 +37,7 @@ pub trait CompareToNode<'a> {
     /// contained within the `NodeOffset::Value` container type they are
     /// expecting, and if given a random `Node`, then calling this will lead
     /// to unsafety.
-    unsafe fn compare_to_node(&self, &'a Node<'a>) -> cmp::Ordering;
+    unsafe fn compare_to_node(&self, node: &'a Node<'a>) -> cmp::Ordering;
 }
 
 #[derive(Debug)]
@@ -64,7 +64,7 @@ impl<'a> SplayTree<'a> {
     }
 
     #[inline(never)]
-    pub unsafe fn find(&mut self, key: &CompareToNode<'a>) -> Option<&'a Node<'a>> {
+    pub unsafe fn find(&mut self, key: &dyn CompareToNode<'a>) -> Option<&'a Node<'a>> {
         self.splay(key);
         self.root.and_then(|root| {
             if let cmp::Ordering::Equal = key.compare_to_node(root) {
@@ -76,7 +76,7 @@ impl<'a> SplayTree<'a> {
     }
 
     #[inline(never)]
-    pub unsafe fn insert(&mut self, key: &CompareToNode<'a>, node: &'a Node<'a>) -> bool {
+    pub unsafe fn insert(&mut self, key: &dyn CompareToNode<'a>, node: &'a Node<'a>) -> bool {
         debug_assert!(node.left.get().is_none() && node.right.get().is_none());
 
         if self.root.is_none() {
@@ -109,7 +109,7 @@ impl<'a> SplayTree<'a> {
     }
 
     #[inline(never)]
-    pub unsafe fn remove(&mut self, key: &CompareToNode<'a>) -> Option<&'a Node<'a>> {
+    pub unsafe fn remove(&mut self, key: &dyn CompareToNode<'a>) -> Option<&'a Node<'a>> {
         if self.root.is_none() {
             return None;
         }
@@ -142,14 +142,14 @@ impl<'a> SplayTree<'a> {
         None
     }
 
-    pub fn walk(&self, f: &mut FnMut(&'a Node<'a>) -> bool) {
+    pub fn walk(&self, f: &mut dyn FnMut(&'a Node<'a>) -> bool) {
         if let Some(root) = self.root {
             root.walk(f);
         }
     }
 
     // The "simple top-down splay" routine from the paper.
-    unsafe fn splay(&mut self, key: &CompareToNode<'a>) {
+    unsafe fn splay(&mut self, key: &dyn CompareToNode<'a>) {
         let mut current = match self.root {
             Some(r) => r,
             None => return,

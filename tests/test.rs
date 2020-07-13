@@ -1,6 +1,3 @@
-extern crate intrusive_splay_tree;
-extern crate typed_arena;
-
 mod single;
 
 use intrusive_splay_tree::SplayTree;
@@ -11,9 +8,11 @@ use std::panic;
 #[cfg(debug_assertions)]
 fn inserting_already_inserted_panics_in_debug() {
     let result = panic::catch_unwind(panic::AssertUnwindSafe(move || {
-        let arena = typed_arena::Arena::new();
+        let arena = bumpalo::Bump::new();
         let mut tree = SplayTree::<SingleTree>::default();
-        let elems = arena.alloc_extend((0..3).map(Single::new));
+        let elems = (0..3)
+            .map(|x| arena.alloc(Single::new(x)))
+            .collect::<Vec<_>>();
 
         for e in elems.iter() {
             tree.insert(e);
