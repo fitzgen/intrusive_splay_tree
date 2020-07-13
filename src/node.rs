@@ -69,7 +69,7 @@ impl<'a> Node<'a> {
         self.right.get()
     }
 
-    pub(crate) fn walk(&'a self, f: &mut FnMut(&'a Node<'a>) -> bool) -> bool {
+    pub(crate) fn walk(&'a self, f: &mut dyn FnMut(&'a Node<'a>) -> bool) -> bool {
         if let Some(left) = self.left.get() {
             if !left.walk(f) {
                 return false;
