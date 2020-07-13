@@ -37,7 +37,7 @@ pub trait CompareToNode<'a> {
     /// contained within the `NodeOffset::Value` container type they are
     /// expecting, and if given a random `Node`, then calling this will lead
     /// to unsafety.
-    unsafe fn compare_to_node(&self, &'a Node<'a>) -> cmp::Ordering;
+    unsafe fn compare_to_node(&self, node: &'a Node<'a>) -> cmp::Ordering;
 }
 
 #[derive(Debug)]

@@ -49,7 +49,7 @@
 //! ## Constraints
 //!
 //! * **Elements within a tree must all have the same lifetime.** This means
-//! that you must use something like the [`typed_arena`][arena] crate for
+//! that you must use something like the [`bumpalo`][arena] crate for
 //! allocation, or be working with static data, etc.
 //!
 //! * **Elements in an intrusive collections are inherently shared.** They are
@@ -61,7 +61,7 @@
 //! liberally use interior mutability, for example by leveraging `Cell`,
 //! `RefCell`, and `Mutex`.
 //!
-//! [arena]: https://crates.io/crates/typed-arena
+//! [arena]: https://crates.io/crates/bumpalo
 //!
 //! ## Example
 //!
@@ -70,11 +70,7 @@
 //! other ordering them by their health.
 //!
 //! ```
-//! #[macro_use]
-//! extern crate intrusive_splay_tree;
-//! extern crate typed_arena;
-//!
-//! use intrusive_splay_tree::SplayTree;
+//! use intrusive_splay_tree::{impl_intrusive_node, SplayTree};
 //!
 //! use std::cmp::Ordering;
 //! use std::marker::PhantomData;
@@ -147,10 +143,10 @@
 //! }
 //!
 //! impl<'a> Monster<'a> {
-//!     /// The `Monster` constructor allocates `Monster`s in a typed arena, and
+//!     /// The `Monster` constructor allocates `Monster`s in a bump arena, and
 //!     /// inserts the new `Monster` in both trees.
 //!     pub fn new(
-//!         arena: &'a typed_arena::Arena<Monster<'a>>,
+//!         arena: &'a bumpalo::Bump,
 //!         name: String,
 //!         health: u64,
 //!         by_name_tree: &mut SplayTree<'a, MonstersByName>,
@@ -172,7 +168,7 @@
 //!
 //! fn main() {
 //!     // The arena that the monsters will live within.
-//!     let mut arena = typed_arena::Arena::new();
+//!     let mut arena = bumpalo::Bump::new();
 //!
 //!     // The splay trees ordered by name and health respectively.
 //!     let mut by_name_tree = SplayTree::default();
@@ -245,7 +241,7 @@ where
     type Elem: TreeOrd<'a, Self>;
 
     /// Get the node for this tree from the given element.
-    fn elem_to_node(&'a Self::Elem) -> &'a Node<'a>;
+    fn elem_to_node(elem: &'a Self::Elem) -> &'a Node<'a>;
 
     /// Get the element for this node (by essentially doing `offsetof` the
     /// node's field).
@@ -255,7 +251,7 @@ where
     /// Given a node inside a different element type, or a node for a different
     /// tree within the same element type, this method will result in memory
     /// unsafety.
-    unsafe fn node_to_elem(&'a Node<'a>) -> &'a Self::Elem;
+    unsafe fn node_to_elem(node: &'a Node<'a>) -> &'a Self::Elem;
 }
 
 /// Implement `IntrusiveNode` for a particular kind of `SplayTree` and its

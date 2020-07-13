@@ -4,8 +4,6 @@ extern crate intrusive_splay_tree;
 #[macro_use]
 extern crate quickcheck;
 
-extern crate typed_arena;
-
 mod single;
 
 use intrusive_splay_tree::{IntrusiveNode, Node, SplayTree, TreeOrd};
@@ -18,10 +16,12 @@ quickcheck! {
     fn find(xs: Vec<usize>, x: usize) -> bool {
         let x_in_xs = xs.contains(&x);
 
-        let arena = typed_arena::Arena::with_capacity(xs.len());
-        let xs = arena.alloc_extend(xs.into_iter().map(|x| Single::new(x)));
+        let arena = bumpalo::Bump::new();
 
-        let mut tree = SplayTree::<SingleTree>::from_iter(xs.iter());
+        let mut tree = SplayTree::<SingleTree>::from_iter(
+            xs.into_iter()
+                .map(|x| &*arena.alloc(Single::new(x)))
+        );
 
         if let Some(c) = tree.find(&x) {
             x_in_xs && c.value == x
@@ -33,10 +33,12 @@ quickcheck! {
     fn remove(xs: Vec<usize>, x: usize) -> bool {
         let x_in_xs = xs.contains(&x);
 
-        let arena = typed_arena::Arena::with_capacity(xs.len());
-        let xs = arena.alloc_extend(xs.into_iter().map(|x| Single::new(x)));
+        let arena = bumpalo::Bump::new();
 
-        let mut tree = SplayTree::<SingleTree>::from_iter(xs.iter());
+        let mut tree = SplayTree::<SingleTree>::from_iter(
+            xs.into_iter()
+                .map(|x| &*arena.alloc(Single::new(x)))
+        );
 
         if let Some(removed) = tree.remove(&x) {
             x_in_xs && removed.value == x && tree.find(&x).is_none()
@@ -48,10 +50,12 @@ quickcheck! {
     fn insert(xs: Vec<usize>, x: usize) -> bool {
         let x_in_xs = xs.contains(&x);
 
-        let arena = typed_arena::Arena::with_capacity(xs.len());
-        let xs = arena.alloc_extend(xs.into_iter().map(|x| Single::new(x)));
+        let arena = bumpalo::Bump::new();
 
-        let mut tree = SplayTree::<SingleTree>::from_iter(xs.iter());
+        let mut tree = SplayTree::<SingleTree>::from_iter(
+            xs.into_iter()
+                .map(|x| &*arena.alloc(Single::new(x)))
+        );
 
         let is_new_entry = tree.insert(arena.alloc(Single::new(x)));
         ((is_new_entry && !x_in_xs) || x_in_xs) && tree.find(&x).map_or(false, |c| c.value == x)
@@ -132,7 +136,7 @@ impl<'a> TreeOrd<'a, ByY<'a>> for usize {
 }
 
 fn trees_from_xs_and_ys<'a>(
-    arena: &'a typed_arena::Arena<Multiple<'a>>,
+    arena: &'a bumpalo::Bump,
     xs: Vec<usize>,
     ys: Vec<usize>,
     x: usize,
@@ -147,21 +151,20 @@ fn trees_from_xs_and_ys<'a>(
     let x_in_xs = xs.contains(&x);
     let y_in_ys = ys.contains(&y);
 
-    let xys = arena.alloc_extend(
-        xs.into_iter()
-            .zip(ys.into_iter())
-            .map(|(x, y)| Multiple::new(x, y)),
-    );
-
-    let by_x = SplayTree::<ByX>::from_iter(xys.iter());
-    let by_y = SplayTree::<ByY>::from_iter(xys.iter());
+    let mut by_x = SplayTree::<ByX>::default();
+    let mut by_y = SplayTree::<ByY>::default();
+    for (x, y) in xs.into_iter().zip(ys) {
+        let m = arena.alloc(Multiple::new(x, y));
+        by_x.insert(m);
+        by_y.insert(m);
+    }
 
     (by_x, by_y, x_in_xs, y_in_ys)
 }
 
 quickcheck! {
     fn multiple_find(xs: Vec<usize>, ys: Vec<usize>, x: usize, y: usize) -> bool {
-        let arena = typed_arena::Arena::new();
+        let arena = bumpalo::Bump::new();
         let (mut by_x, mut by_y, x_in_xs, y_in_ys) = trees_from_xs_and_ys(&arena, xs, ys, x, y);
 
         let by_x_ok = if let Some(m) = by_x.find(&x) {
@@ -180,7 +183,7 @@ quickcheck! {
     }
 
     fn multiple_remove(xs: Vec<usize>, ys: Vec<usize>, x: usize, y: usize) -> bool {
-        let arena = typed_arena::Arena::new();
+        let arena = bumpalo::Bump::new();
         let (mut by_x, mut by_y, x_in_xs, y_in_ys) = trees_from_xs_and_ys(&arena, xs, ys, x, y);
 
         let by_x_ok = if let Some(m) = by_x.remove(&x) {
@@ -201,7 +204,7 @@ quickcheck! {
     }
 
     fn multiple_insert(xs: Vec<usize>, ys: Vec<usize>, x: usize, y: usize) -> bool {
-        let arena = typed_arena::Arena::new();
+        let arena = bumpalo::Bump::new();
         let (mut by_x, mut by_y, x_in_xs, y_in_ys) = trees_from_xs_and_ys(&arena, xs, ys, x, y);
 
         let elem = arena.alloc(Multiple::new(x, y));

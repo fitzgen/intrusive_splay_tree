@@ -1,5 +1,3 @@
-extern crate intrusive_splay_tree;
-
 use intrusive_splay_tree::{IntrusiveNode, Node, TreeOrd};
 use std::cmp::Ordering;
 use std::marker::PhantomData;
