@@ -216,8 +216,6 @@
 //! }
 //! ```
 
-extern crate unreachable;
-
 mod internal;
 mod node;
 
