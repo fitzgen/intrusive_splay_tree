@@ -12,21 +12,6 @@
 use super::Node;
 use core::cmp;
 
-#[cfg(debug_assertions)]
-unsafe fn unchecked_unwrap<T>(o: Option<T>) -> T {
-    o.unwrap()
-}
-
-#[cfg(not(debug_assertions))]
-#[inline]
-unsafe fn unchecked_unwrap<T>(o: Option<T>) -> T {
-    use unreachable::unreachable;
-    match o {
-        Some(t) => t,
-        None => unreachable(),
-    }
-}
-
 /// Internal trait for anything that can be compared to a `Node`.
 pub trait CompareToNode<'a> {
     /// Compare `self` to the value containing the given `Node`.
@@ -65,81 +50,81 @@ impl<'a> SplayTree<'a> {
 
     #[inline(never)]
     pub unsafe fn find(&mut self, key: &dyn CompareToNode<'a>) -> Option<&'a Node<'a>> {
-        self.splay(key);
-        self.root.and_then(|root| {
-            if let cmp::Ordering::Equal = key.compare_to_node(root) {
-                Some(root)
-            } else {
-                None
+        match self.root {
+            Some(root) => {
+                let root = self.splay(root, key);
+                if let cmp::Ordering::Equal = key.compare_to_node(root) {
+                    Some(root)
+                } else {
+                    None
+                }
             }
-        })
+            None => None,
+        }
     }
 
     #[inline(never)]
     pub unsafe fn insert(&mut self, key: &dyn CompareToNode<'a>, node: &'a Node<'a>) -> bool {
         debug_assert!(node.left.get().is_none() && node.right.get().is_none());
 
-        if self.root.is_none() {
-            self.root = Some(node.into());
-            return true;
-        }
+        match self.root {
+            Some(root) => {
+                let root = self.splay(root, key);
 
-        self.splay(key);
+                match key.compare_to_node(root) {
+                    cmp::Ordering::Equal => return false,
+                    cmp::Ordering::Less => {
+                        node.left.set(root.left.get());
+                        node.right.set(Some(root));
+                        root.left.set(None);
+                    }
+                    cmp::Ordering::Greater => {
+                        node.right.set(root.right.get());
+                        node.left.set(Some(root));
+                        root.right.set(None);
+                    }
+                }
 
-        // We know the root exists because if it didn't, then we would have
-        // taken the early return above.
-        let root = unchecked_unwrap(self.root);
-
-        match key.compare_to_node(root) {
-            cmp::Ordering::Equal => return false,
-            cmp::Ordering::Less => {
-                node.left.set(root.left.get());
-                node.right.set(Some(root));
-                root.left.set(None);
+                self.root = Some(node);
+                true
             }
-            cmp::Ordering::Greater => {
-                node.right.set(root.right.get());
-                node.left.set(Some(root));
-                root.right.set(None);
+            None => {
+                self.root = Some(node);
+                true
             }
         }
-
-        self.root = Some(node);
-        true
     }
 
     #[inline(never)]
     pub unsafe fn remove(&mut self, key: &dyn CompareToNode<'a>) -> Option<&'a Node<'a>> {
-        if self.root.is_none() {
-            return None;
-        }
+        match self.root {
+            Some(root) => {
+                // Do a splay to move the node to the root, if it exists.
+                let node = self.splay(root, key);
+                self.root = None;
+                if let cmp::Ordering::Equal = key.compare_to_node(node) {
+                    // Ok, we found the node we want to remove. Disconnect it from
+                    // the tree and fix up the new `self.root`.
+                    match node.left.get() {
+                        Some(node_left) => {
+                            let right = node.right.get();
+                            self.splay(node_left, key).right.set(right);
+                        }
+                        None => {
+                            self.root = node.right.get();
+                        }
+                    }
 
-        // Do a splay to move the node to the root, if it exists.
-        self.splay(key);
+                    node.left.set(None);
+                    node.right.set(None);
+                    return Some(node);
+                }
 
-        // We know the root exists because if it didn't, then we would have
-        // taken the early return above.
-        let node = unchecked_unwrap(self.root.take());
-
-        if let cmp::Ordering::Equal = key.compare_to_node(node) {
-            // Ok, we found the node we want to remove. Disconnect it from
-            // the tree and fix up the new `self.root`.
-            if node.left.get().is_none() {
-                self.root = node.right.get();
-            } else {
-                let right = node.right.get();
-                self.root = node.left.get();
-                self.splay(key);
-                unchecked_unwrap(self.root.as_ref()).right.set(right);
+                // The node we were trying to remove isn't in the tree.
+                None
             }
-
-            node.left.set(None);
-            node.right.set(None);
-            return Some(node);
+            None => None,
         }
-
-        // The node we were trying to remove isn't in the tree.
-        None
     }
 
     pub fn walk(&self, f: &mut dyn FnMut(&'a Node<'a>) -> bool) {
@@ -149,12 +134,11 @@ impl<'a> SplayTree<'a> {
     }
 
     // The "simple top-down splay" routine from the paper.
-    unsafe fn splay(&mut self, key: &dyn CompareToNode<'a>) {
-        let mut current = match self.root {
-            Some(r) => r,
-            None => return,
-        };
-
+    unsafe fn splay(
+        &mut self,
+        mut current: &'a Node<'a>,
+        key: &dyn CompareToNode<'a>,
+    ) -> &'a Node<'a> {
         let null = Node::default();
         let mut left = &null;
         let mut right = &null;
@@ -213,5 +197,6 @@ impl<'a> SplayTree<'a> {
         current.left.set(null.right.get());
         current.right.set(null.left.get());
         self.root = Some(current);
+        current
     }
 }
