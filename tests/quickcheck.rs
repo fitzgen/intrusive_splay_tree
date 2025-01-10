@@ -132,6 +132,18 @@ quickcheck! {
 
         true
     }
+
+    fn pop_root(xs: Vec<usize>) -> bool {
+        let arena = bumpalo::Bump::new();
+
+        let mut tree = SplayTree::<SingleTree>::from_iter(
+            xs.into_iter()
+                .map(|x| &*arena.alloc(Single::new(x)))
+        );
+
+        let root = tree.root().map(|n| n.value);
+        tree.pop_root().map(|n| n.value) == root
+    }
 }
 
 #[derive(Debug, Default)]
