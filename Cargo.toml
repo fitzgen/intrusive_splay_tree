@@ -2,7 +2,7 @@
 authors = ["Nick Fitzgerald <fitzgen@gmail.com>"]
 categories = ["memory-management", "data-structures", "no-std", "wasm"]
 description = "An intrusive splay tree implementation that is no-std compatible and free from allocation and moves."
-edition = "2018"
+edition = "2021"
 license = "MPL-2.0"
 name = "intrusive_splay_tree"
 readme = "./README.md"
