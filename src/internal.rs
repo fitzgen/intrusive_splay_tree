@@ -25,6 +25,22 @@ pub trait CompareToNode<'a> {
     unsafe fn compare_to_node(&self, node: &'a Node<'a>) -> cmp::Ordering;
 }
 
+/// A node comparator to get the minimum node.
+struct MinNode;
+impl<'a> CompareToNode<'a> for MinNode {
+    unsafe fn compare_to_node(&self, _node: &'a Node<'a>) -> cmp::Ordering {
+        cmp::Ordering::Less
+    }
+}
+
+/// A node comparator to get the maximum node.
+struct MaxNode;
+impl<'a> CompareToNode<'a> for MaxNode {
+    unsafe fn compare_to_node(&self, _node: &'a Node<'a>) -> cmp::Ordering {
+        cmp::Ordering::Greater
+    }
+}
+
 #[derive(Debug)]
 pub struct SplayTree<'a> {
     root: Option<&'a Node<'a>>,
@@ -100,38 +116,63 @@ impl<'a> SplayTree<'a> {
         }
     }
 
-    #[inline(never)]
-    pub unsafe fn remove(&mut self, key: &dyn CompareToNode<'a>) -> Option<&'a Node<'a>> {
-        match self.root {
-            Some(root) => {
-                // Do a splay to move the node to the root, if it exists.
-                let node = self.splay(root, key);
-                self.root = None;
-                if let cmp::Ordering::Equal = key.compare_to_node(node) {
-                    // Ok, we found the node we want to remove. Disconnect it from
-                    // the tree and fix up the new `self.root`.
-                    match node.left.get() {
-                        Some(node_left) => {
-                            let right = node.right.get();
-                            self.splay(node_left, key).right.set(right);
-                        }
-                        None => {
-                            self.root = node.right.get();
-                        }
-                    }
+    #[inline]
+    pub fn min(&mut self) -> Option<&'a Node<'a>> {
+        let root = self.root()?;
+        Some(unsafe { self.splay(root, &MinNode) })
+    }
 
-                    node.left.set(None);
-                    node.right.set(None);
-                    return Some(node);
+    #[inline]
+    pub fn pop_min(&mut self) -> Option<&'a Node<'a>> {
+        self.min()?;
+        self.pop_root()
+    }
+
+    #[inline]
+    pub fn max(&mut self) -> Option<&'a Node<'a>> {
+        let root = self.root()?;
+        Some(unsafe { self.splay(root, &MaxNode) })
+    }
+
+    #[inline]
+    pub fn pop_max(&mut self) -> Option<&'a Node<'a>> {
+        self.max()?;
+        self.pop_root()
+    }
+
+    pub fn pop_root(&mut self) -> Option<&'a Node<'a>> {
+        let old_root = self.root.take()?;
+
+        match old_root.left.get() {
+            Some(old_root_left) => {
+                let old_root_right = old_root.right.get();
+                unsafe {
+                    self.splay(old_root_left, &MaxNode)
+                        .right
+                        .set(old_root_right)
                 }
-
-                // The node we were trying to remove isn't in the tree.
-                None
             }
-            None => None,
+            None => {
+                self.root = old_root.right.get();
+            }
+        }
+
+        old_root.left.set(None);
+        old_root.right.set(None);
+        Some(old_root)
+    }
+
+    pub unsafe fn remove(&mut self, key: &dyn CompareToNode<'a>) -> Option<&'a Node<'a>> {
+        let root = self.root?;
+        self.splay(root, key);
+        if self.root.is_some_and(|r| key.compare_to_node(r).is_eq()) {
+            self.pop_root()
+        } else {
+            None
         }
     }
 
+    #[inline]
     pub fn walk(&self, f: &mut dyn FnMut(&'a Node<'a>) -> bool) {
         if let Some(root) = self.root {
             root.walk(f);
@@ -139,6 +180,7 @@ impl<'a> SplayTree<'a> {
     }
 
     // The "simple top-down splay" routine from the paper.
+    #[inline(never)]
     unsafe fn splay(
         &mut self,
         mut current: &'a Node<'a>,

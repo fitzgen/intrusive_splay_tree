@@ -498,6 +498,51 @@ where
         }
     }
 
+    /// Pop the root element from the tree.
+    ///
+    /// If the tree has a root, it is removed and `Some(root)` is
+    /// returned. Otherwise, `None` is returned.
+    #[inline]
+    pub fn pop_root(&mut self) -> Option<&'a T::Elem> {
+        unsafe { self.tree.pop_root().map(|node| T::node_to_elem(node)) }
+    }
+
+    /// Get the minimum element in the tree.
+    ///
+    /// If the tree is non-empty, then the minimum element is splayed to the
+    /// root and `Some(min_elem)` is returned. Otherwise, `None` is returned.
+    #[inline]
+    pub fn min(&mut self) -> Option<&'a T::Elem> {
+        self.tree.min().map(|node| unsafe { T::node_to_elem(node) })
+    }
+
+    /// Pop the minimum element from the tree.
+    ///
+    /// If the tree is non-empty, then the minimum element is removed and
+    /// `Some(_)` is returned. Otherwise, `None` is returned.
+    #[inline]
+    pub fn pop_min(&mut self) -> Option<&'a T::Elem> {
+        unsafe { self.tree.pop_min().map(|node| T::node_to_elem(node)) }
+    }
+
+    /// Get the maximum element in the tree.
+    ///
+    /// If the tree is non-empty, then the maximum element is splayed to the
+    /// root and `Some(max_elem)` is returned. Otherwise, `None` is returned.
+    #[inline]
+    pub fn max(&mut self) -> Option<&'a T::Elem> {
+        self.tree.max().map(|node| unsafe { T::node_to_elem(node) })
+    }
+
+    /// Pop the maximum element from the tree.
+    ///
+    /// If the tree is non-empty, then the maximum element is removed and
+    /// `Some(_)` is returned. Otherwise, `None` is returned.
+    #[inline]
+    pub fn pop_max(&mut self) -> Option<&'a T::Elem> {
+        unsafe { self.tree.pop_max().map(|node| T::node_to_elem(node)) }
+    }
+
     /// Walk the tree in order.
     ///
     /// The `C` type controls whether iteration should continue, or break and
