@@ -60,6 +60,78 @@ quickcheck! {
         let is_new_entry = tree.insert(arena.alloc(Single::new(x)));
         ((is_new_entry && !x_in_xs) || x_in_xs) && tree.find(&x).map_or(false, |c| c.value == x)
     }
+
+    fn tree_min(xs: Vec<usize>) -> bool {
+        let min = xs.iter().copied().min();
+
+        let arena = bumpalo::Bump::new();
+
+        let mut tree = SplayTree::<SingleTree>::from_iter(
+            xs.into_iter()
+                .map(|x| &*arena.alloc(Single::new(x)))
+        );
+
+        tree.min().map(|s| s.value) == min
+    }
+
+    fn tree_max(xs: Vec<usize>) -> bool {
+        let max = xs.iter().copied().max();
+
+        let arena = bumpalo::Bump::new();
+
+        let mut tree = SplayTree::<SingleTree>::from_iter(
+            xs.into_iter()
+                .map(|x| &*arena.alloc(Single::new(x)))
+        );
+
+        tree.max().map(|s| s.value) == max
+    }
+
+    fn pop_min(xs: Vec<usize>) -> bool {
+        if xs.is_empty() {
+            return true;
+        }
+
+        let arena = bumpalo::Bump::new();
+
+        let mut tree = SplayTree::<SingleTree>::from_iter(
+            xs.into_iter()
+                .map(|x| &*arena.alloc(Single::new(x)))
+        );
+
+        let mut prev_min = tree.pop_min().unwrap().value;
+        while let Some(n) = tree.pop_min() {
+            if n.value < prev_min {
+                return false;
+            }
+            prev_min = n.value;
+        }
+
+        true
+    }
+
+    fn pop_max(xs: Vec<usize>) -> bool {
+        if xs.is_empty() {
+            return true;
+        }
+
+        let arena = bumpalo::Bump::new();
+
+        let mut tree = SplayTree::<SingleTree>::from_iter(
+            xs.into_iter()
+                .map(|x| &*arena.alloc(Single::new(x)))
+        );
+
+        let mut prev_max = tree.pop_max().unwrap().value;
+        while let Some(n) = tree.pop_max() {
+            if n.value > prev_max {
+                return false;
+            }
+            prev_max = n.value;
+        }
+
+        true
+    }
 }
 
 #[derive(Debug, Default)]
