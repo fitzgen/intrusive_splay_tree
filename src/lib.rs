@@ -409,6 +409,15 @@ impl<'a, T> SplayTree<'a, T>
 where
     T: 'a + IntrusiveNode<'a>,
 {
+    /// Construct a new, empty tree.
+    #[inline]
+    pub const fn new() -> Self {
+        Self {
+            tree: internal::SplayTree::new(),
+            _phantom: PhantomData,
+        }
+    }
+
     /// Is this tree empty?
     #[inline]
     pub fn is_empty(&self) -> bool {

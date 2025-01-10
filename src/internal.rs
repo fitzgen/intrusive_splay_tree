@@ -39,6 +39,11 @@ impl<'a> Default for SplayTree<'a> {
 
 impl<'a> SplayTree<'a> {
     #[inline]
+    pub const fn new() -> Self {
+        SplayTree { root: None }
+    }
+
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.root.is_none()
     }
