@@ -10,5 +10,5 @@ repository = "https://github.com/fitzgen/intrusive_splay_tree"
 version = "0.2.1"
 
 [dev-dependencies]
-bumpalo = "3.4.0"
+bumpalo = "3.16.0"
 quickcheck = "0.6.0"
