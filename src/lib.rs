@@ -64,7 +64,7 @@ macro_rules! impl_intrusive_node {
             unsafe fn node_to_elem(
                 node: & $intrusive_node_lifetime $crate::Node< $intrusive_node_lifetime >
             ) -> & $intrusive_node_lifetime Self::Elem {
-                let offset = memoffset::offset_of!(Self::Elem, $node);
+                let offset = ::core::mem::offset_of!(Self::Elem, $node);
 
                 let node = node as *const _ as *const u8;
                 let elem = node.offset(-(offset as isize)) as *const Self::Elem;

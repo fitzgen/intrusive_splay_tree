@@ -7,13 +7,7 @@ license = "MPL-2.0"
 name = "intrusive_splay_tree"
 readme = "./README.md"
 repository = "https://github.com/fitzgen/intrusive_splay_tree"
-version = "0.2.0"
-
-[badges]
-travis-ci = { repository = "fitzgen/intrusive_splay_tree" }
-
-[dependencies]
-memoffset = "0.5.5"
+version = "0.2.1"
 
 [dev-dependencies]
 bumpalo = "3.4.0"
