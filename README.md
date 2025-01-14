@@ -1,15 +1,15 @@
-[![Build Status](https://travis-ci.org/fitzgen/intrusive_splay_tree.svg?branch=master)](https://travis-ci.org/fitzgen/intrusive_splay_tree)
+<div align="center">
+  <h1><code>intrusive_splay_tree</code></h1>
+  <p><strong>An intrusive, allocation-free splay tree implementation.</strong></p>
+  <p>
+    <a href="https://docs.rs/intrusive_splay_tree/"><img src="https://docs.rs/intrusive_splay_tree/badge.svg" /></a>
+    <a href="https://crates.io/crates/intrusive_splay_tree"><img src="https://img.shields.io/crates/v/intrusive_splay_tree.svg" /></a>
+    <a href="https://crates.io/crates/intrusive_splay_tree"><img src="https://img.shields.io/crates/d/intrusive_splay_tree.svg" /></a>
+    <a href="https://github.com/fitzgen/intrusive_splay_tree/actions/workflows/rust.yml"><img src="https://github.com/fitzgen/intrusive_splay_tree/actions/workflows/rust.yml/badge.svg" /></a>
+  </p>
+</div>
 
-# intrusive_splay_tree
-
-An intrusive, allocation-free [splay tree] implementation.
-
-[![](https://docs.rs/intrusive_splay_tree/badge.svg)](https://docs.rs/intrusive_splay_tree/)
-[![](https://img.shields.io/crates/v/intrusive_splay_tree.svg)](https://crates.io/crates/intrusive_splay_tree)
-[![](https://img.shields.io/crates/d/intrusive_splay_tree.svg)](https://crates.io/crates/intrusive_splay_tree)
-[![Travis CI Build Status](https://travis-ci.org/fitzgen/intrusive_splay_tree.svg?branch=master)](https://travis-ci.org/fitzgen/intrusive_splay_tree)
-
-Splay trees are self-adjusting, meaning that operating on an element (for
+[Splay trees] are self-adjusting, meaning that operating on an element (for
 example, doing a `find` or an `insert`) rebalances the tree in such a way
 that the element becomes the root. This means that subsequent operations on
 that element are *O(1)* as long as no other element is operated on in the
@@ -43,7 +43,7 @@ in size: left and right sub tree pointers. There are no parent pointers,
 which would require another word of overhead. To meet this goal, the
 implementation uses the "top-down" variant of splay trees.
 
-[splay tree]: https://en.wikipedia.org/wiki/Splay_tree
+[Splay trees]: https://en.wikipedia.org/wiki/Splay_tree
 [paper]: http://www.cs.cmu.edu/~sleator/papers/self-adjusting.pdf
 
 ### Constraints
@@ -215,5 +215,3 @@ fn main() {
     assert!(by_health_tree.find(&0).is_none());
 }
 ```
-
-License: MPL-2.0
