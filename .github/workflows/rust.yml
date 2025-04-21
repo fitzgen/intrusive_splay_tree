@@ -10,9 +10,32 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: Build and Run tests
       run: cargo test --verbose
+
+  miri:
+    runs-on: ubuntu-latest
+    env:
+      MIRIFLAGS: -Zmiri-permissive-provenance -Zmiri-disable-isolation -Zmiri-backtrace=full
+      CARGO_NEXTEST_VERSION: 0.9.88
+    steps:
+    - uses: actions/checkout@v4
+
+    # Install Rust nightly and MIRI.
+    - run: rustup toolchain install nightly
+    - run: rustup default nightly
+    - run: rustup component add rust-src miri
+
+    # Install and cache `cargo-nextest`.
+    - uses: actions/cache@v4
+      with:
+        path: ${{ runner.tool_cache }}/cargo-nextest
+        key: cargo-nextest-bin-${{ env.CARGO_NEXTEST_VERSION }}
+    - run: echo "${{ runner.tool_cache }}/cargo-nextest/bin" >> $GITHUB_PATH
+    - run: cargo install --root "${{ runner.tool_cache }}/cargo-nextest" --version ${{ env.CARGO_NEXTEST_VERSION }} cargo-nextest --locked
+
+    - run: cargo miri nextest run -j4 --no-fail-fast

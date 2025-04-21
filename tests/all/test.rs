@@ -1,7 +1,5 @@
-mod single;
-
+use crate::single::{Single, SingleTree};
 use intrusive_splay_tree::SplayTree;
-use single::{Single, SingleTree};
 use std::panic;
 
 #[test]

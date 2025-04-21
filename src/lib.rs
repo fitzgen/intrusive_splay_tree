@@ -58,17 +58,22 @@ macro_rules! impl_intrusive_node {
             fn elem_to_node(
                 elem: & $intrusive_node_lifetime Self::Elem
             ) -> & $intrusive_node_lifetime $crate::Node< $intrusive_node_lifetime > {
-                &elem. $node
+                &elem.$node
             }
 
             unsafe fn node_to_elem(
                 node: & $intrusive_node_lifetime $crate::Node< $intrusive_node_lifetime >
             ) -> & $intrusive_node_lifetime Self::Elem {
-                let offset = ::core::mem::offset_of!(Self::Elem, $node);
+                let node = core::ptr::with_exposed_provenance::<u8>(node as *const _ as usize);
 
-                let node = node as *const _ as *const u8;
-                let elem = node.offset(-(offset as isize)) as *const Self::Elem;
-                &*elem
+                let offset = core::mem::offset_of!(Self::Elem, $node);
+                let offset = isize::try_from(offset).unwrap();
+                let neg_offset = offset.checked_neg().unwrap();
+
+                let elem = node.offset(neg_offset);
+                let elem = elem.cast::<Self::Elem>();
+
+                elem.as_ref().unwrap()
             }
         }
     }
@@ -257,6 +262,15 @@ where
     /// the behavior is safe, but unspecified.
     #[inline]
     pub fn insert(&mut self, elem: &'a T::Elem) -> bool {
+        // To satisfy MIRI, we need to expose provenance of element added to the
+        // tree, so that when we query the tree and go from node-to-elem, we can
+        // use this exposed provenance. This is because, while the lifetimes
+        // ensure that the element remains borrowed while inserted in the tree,
+        // we don't have a good way to plumb through a pointer with the original
+        // element's borrowed provenance through to all node-to-elem
+        // conversions.
+        let _ = (elem as *const T::Elem).expose_provenance();
+
         unsafe {
             let query: Query<_, T> = Query::new(elem);
             let node = T::elem_to_node(elem);
