@@ -1,16 +1,50 @@
-#[macro_use]
-extern crate intrusive_splay_tree;
-
-#[macro_use]
-extern crate quickcheck;
-
-mod single;
-
-use intrusive_splay_tree::{IntrusiveNode, Node, SplayTree, TreeOrd};
-use single::{Single, SingleTree};
-use std::cmp::{min, Ordering};
+use crate::multiple::{trees_from_xs_and_ys, Multiple};
+use crate::single::{Single, SingleTree};
+use intrusive_splay_tree::SplayTree;
 use std::iter::FromIterator;
-use std::marker::PhantomData;
+
+/// Like the `quickcheck::quickcheck` macro, but limits the number of tests run
+/// through MIRI, since MIRI execution is so slow.
+#[macro_export]
+macro_rules! quickcheck {
+    (
+        $(
+            $(#[$m:meta])*
+            fn $fn_name:ident($($arg_name:ident : $arg_ty:ty),*) -> $ret:ty {
+                $($code:tt)*
+            }
+        )*
+    ) => {
+        $(
+            #[test]
+            $(#[$m])*
+            fn $fn_name() {
+                fn prop($($arg_name: $arg_ty),*) -> $ret {
+                    $($code)*
+                }
+
+                let mut qc = ::quickcheck::QuickCheck::new();
+
+                // Use the `QUICKCHECK_TESTS` environment variable from
+                // compiletime to avoid violating MIRI's isolation by looking at
+                // the runtime environment variable.
+                let tests = option_env!("QUICKCHECK_TESTS").and_then(|s| s.parse().ok());
+
+                // Limit quickcheck tests under MIRI, since they are otherwise
+                // super slow.
+                #[cfg(miri)]
+                let tests = tests.or(Some(25));
+
+                if let Some(tests) = tests {
+                    eprintln!("Executing at most {} quickchecks", tests);
+                    qc = qc.tests(tests);
+                }
+
+                qc.quickcheck(prop as fn($($arg_ty),*) -> $ret);
+            }
+        )*
+    };
+}
 
 quickcheck! {
     fn find(xs: Vec<usize>, x: usize) -> bool {
@@ -144,109 +178,7 @@ quickcheck! {
         let root = tree.root().map(|n| n.value);
         tree.pop_root().map(|n| n.value) == root
     }
-}
 
-#[derive(Debug, Default)]
-struct Multiple<'a> {
-    by_x: intrusive_splay_tree::Node<'a>,
-    by_y: intrusive_splay_tree::Node<'a>,
-    x: usize,
-    y: usize,
-}
-
-impl<'a> Multiple<'a> {
-    fn new(x: usize, y: usize) -> Multiple<'a> {
-        Multiple {
-            x,
-            y,
-            ..Default::default()
-        }
-    }
-}
-
-struct ByX<'a>(PhantomData<&'a Multiple<'a>>);
-
-impl_intrusive_node! {
-    impl<'a> IntrusiveNode<'a> for ByX<'a>
-    where
-        type Elem = Multiple<'a>,
-        node = by_x;
-}
-
-impl<'a> TreeOrd<'a, ByX<'a>> for Multiple<'a> {
-    fn tree_cmp(&self, rhs: &Multiple<'a>) -> Ordering {
-        self.x.cmp(&rhs.x)
-    }
-}
-
-impl<'a> TreeOrd<'a, ByX<'a>> for usize {
-    fn tree_cmp(&self, rhs: &Multiple<'a>) -> Ordering {
-        self.cmp(&rhs.x)
-    }
-}
-
-struct ByY<'a>(PhantomData<&'a Multiple<'a>>);
-
-unsafe impl<'a> IntrusiveNode<'a> for ByY<'a> {
-    type Elem = Multiple<'a>;
-
-    fn elem_to_node(elem: &'a Self::Elem) -> &'a Node<'a> {
-        &elem.by_y
-    }
-
-    unsafe fn node_to_elem(node: &'a Node<'a>) -> &'a Self::Elem {
-        let offset = {
-            let m = Multiple::default();
-            let node = &m.by_y as *const _ as usize;
-            let m = &m as *const _ as usize;
-            node - m
-        };
-        let node = node as *const _ as *const u8;
-        let elem = node.offset(-(offset as isize)) as *const Self::Elem;
-        &*elem
-    }
-}
-
-impl<'a> TreeOrd<'a, ByY<'a>> for Multiple<'a> {
-    fn tree_cmp(&self, rhs: &Multiple<'a>) -> Ordering {
-        self.y.cmp(&rhs.y)
-    }
-}
-
-impl<'a> TreeOrd<'a, ByY<'a>> for usize {
-    fn tree_cmp(&self, rhs: &Multiple<'a>) -> Ordering {
-        self.cmp(&rhs.y)
-    }
-}
-
-fn trees_from_xs_and_ys<'a>(
-    arena: &'a bumpalo::Bump,
-    xs: Vec<usize>,
-    ys: Vec<usize>,
-    x: usize,
-    y: usize,
-) -> (SplayTree<'a, ByX<'a>>, SplayTree<'a, ByY<'a>>, bool, bool) {
-    let min_len = min(xs.len(), ys.len());
-    let mut xs = xs;
-    let mut ys = ys;
-    xs.truncate(min_len);
-    ys.truncate(min_len);
-
-    let x_in_xs = xs.contains(&x);
-    let y_in_ys = ys.contains(&y);
-
-    let mut by_x = SplayTree::<ByX>::default();
-    let mut by_y = SplayTree::<ByY>::default();
-    for (x, y) in xs.into_iter().zip(ys) {
-        let m = arena.alloc(Multiple::new(x, y));
-        by_x.insert(m);
-        by_y.insert(m);
-    }
-
-    (by_x, by_y, x_in_xs, y_in_ys)
-}
-
-quickcheck! {
     fn multiple_find(xs: Vec<usize>, ys: Vec<usize>, x: usize, y: usize) -> bool {
         let arena = bumpalo::Bump::new();
         let (mut by_x, mut by_y, x_in_xs, y_in_ys) = trees_from_xs_and_ys(&arena, xs, ys, x, y);
